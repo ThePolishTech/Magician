@@ -1,18 +1,21 @@
 // --== MODULE IMPORTS ==-- //
     mod utils;
+    use utils::startup::parse_arguments;
 // ==--
 
 // --== CRATE IMPORTS ==-- //
     
     // STD & CORE
         use std::{
-            env, fs, io::{self, Write}, path::PathBuf, process
+            env, fs, io, path::PathBuf, process
         };
 
     // SERENITY
 
     // TERMION
         use termion::color;
+
+    use crate::utils::startup::parse_arguments::ConfigPathKey;
 
     // CHRONO
 
@@ -35,6 +38,11 @@ async fn main() {
         // Our first order of buisness is collecting arguments passed to our program. Thanks to this we
         // will be able to bake in some launch paramaters
         let inbound_arguments: Vec<String> = env::args().collect();
+        let post_parse_data = parse_arguments::parse_arguments(&inbound_arguments);
+
+
+        let mut bot_config_path = post_parse_data.get::<ConfigPathKey>().expect("Should be passed by parsing function");
+        /*
         match inbound_arguments.get(1) {
             Some(value)
                 if value == "help" || value == "--help"
@@ -179,14 +187,14 @@ async fn main() {
                 process::exit(1)
             }
             _ => {}
-        }
+        }*/
     // ==--
     
 
     // If user didn't specify a custom path to the bot config toml, attempt to find the file, make
     // sure to see if it can be openable
     let bot_config_path: PathBuf = match bot_config_path {
-        Some(path) => path,
+        Some(path) => path.to_path_buf(),
         None => {
             let current_dir = match env::current_dir() {
                 Ok(path) => path,
