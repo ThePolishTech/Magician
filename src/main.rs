@@ -1,3 +1,7 @@
+// --== MODULE IMPORTS ==-- //
+    mod utils;
+// ==--
+
 // --== CRATE IMPORTS ==-- //
     
     // STD & CORE
@@ -233,3 +237,4 @@ async fn main() {
         "Current Dir: {:?}\nArguments: {:?}\nPath: {:?}", env::current_dir(), inbound_arguments, bot_config_path
     );
 }
+
