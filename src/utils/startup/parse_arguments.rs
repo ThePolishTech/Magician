@@ -1,10 +1,23 @@
-use std::{
-    fs, io::{self, Write}, path::PathBuf, process
-};
-use crate::utils::misc::{
-    colour_codes,
-    template_config
-};
+#![allow(clippy::print_literal)]
+
+// --== MODULE IMPORTS ==-- //
+    use crate::utils::misc::{
+        colour_codes,
+        template_config
+    };
+// ==--
+
+// --== CRATE IMPORTS ==-- //
+
+    // STD & CORE
+    use std::{
+        fs,
+        process,
+        path::PathBuf,
+        io::{self, Write}
+    };
+// ==--
+
 
 
 use serenity::prelude::{

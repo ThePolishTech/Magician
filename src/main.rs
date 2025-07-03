@@ -1,6 +1,10 @@
 // --== MODULE IMPORTS ==-- //
     mod utils;
-    use utils::startup::parse_arguments;
+    use utils::startup::parse_arguments::{
+        self,
+        ConfigPathKey
+    };
+
 // ==--
 
 // --== CRATE IMPORTS ==-- //
@@ -14,8 +18,6 @@
 
     // TERMION
         use termion::color;
-
-    use crate::utils::startup::parse_arguments::ConfigPathKey;
 
     // CHRONO
 
