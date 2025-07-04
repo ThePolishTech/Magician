@@ -2,8 +2,7 @@
 
 // --== MODULE IMPORTS ==-- //
     use crate::utils::misc::{
-        colour_codes,
-        template_config
+        colour_codes, help_menu::{self, help_menu}, template_config
     };
 // ==--
 
@@ -53,21 +52,8 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
         Some(primary_argument) 
             if primary_argument == "help" || primary_argument == "--help"
         => {
-            println!(
-                "This will be a help menu! For now have some colours!\n{}Error\n{}Warning\n{}Caution\n{}Success\n{}Info\n{}Field\n{}Location{}",
-                colour_codes::ErrorColour,
-                colour_codes::WarningColour,
-                colour_codes::CautionColour,
-                colour_codes::SuccessColour,
-                colour_codes::InfoColour,
-                colour_codes::FieldColour,
-                colour_codes::LocationColour,
-                colour_codes::ResetColour
-            );
-            println!(
-                "\n{}",
-                "Process exit codes: \n  - 0: Successful Exit\n  - 1: Incorrect Configuration\n  - 10-19: Startup Error"
-            );
+            println!( "{}", help_menu() );
+            process::exit(1);
         },
         // [1] Help
         
