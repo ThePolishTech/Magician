@@ -188,7 +188,7 @@ async fn main() {
         let bot_token =
             match &config_data["bot_token"] { Value::String(token) => token, _ => panic!("Code failed to validate field `bot_token`") };
         let wakeup_channel_id =
-            match &config_data["wakeup_channel_id"] { Value::Integer(id) => id, _ => panic!("Code failed to validate field `wakeup_channel_id`") };
+            match &config_data["wakeup_channel_id"] { Value::Integer(id) => *id as u64, _ => panic!("Code failed to validate field `wakeup_channel_id`") };
     // ==--
     
     // --== OPEN DATABASE ==-- //
@@ -265,7 +265,7 @@ async fn main() {
                 // Filling our client's context typemap with values
                 {
                     let mut data_write = client_builder.data.write().await;
-                    data_write.insert::<context_keys::WakeupChannelIdKey>( *wakeup_channel_id );
+                    data_write.insert::<context_keys::WakeupChannelIdKey>( wakeup_channel_id );
                 }
 
                 println!(
