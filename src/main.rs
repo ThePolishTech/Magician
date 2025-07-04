@@ -5,10 +5,12 @@
             self,
             ConfigPathKey
         },
-        runtime_utils::{
-            runtime_client,
-            context_keys
-        },
+    };
+
+    mod runtime;
+    use runtime::{
+        context_keys,
+        runtime_client
     };
 
 // ==--
