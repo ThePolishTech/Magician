@@ -239,6 +239,7 @@ async fn main() {
                     why,
                     ColourCode::Reset
                 );
+                process::exit(1);
             }
         }
     // ==--

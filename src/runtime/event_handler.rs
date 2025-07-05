@@ -1,7 +1,5 @@
 // --== MODULE IMPORTS ==-- //
 
-    use std::fmt::Pointer;
-
     use crate::{
         runtime::{
             context_keys,
