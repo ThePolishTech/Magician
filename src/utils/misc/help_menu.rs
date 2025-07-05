@@ -1,4 +1,4 @@
-use crate::utils::misc::colour_codes;
+use crate::utils::misc::colour_codes::ColourCode;
 
 pub fn help_menu() -> String {
         
@@ -7,13 +7,13 @@ pub fn help_menu() -> String {
         Error codes:\n\
           - 1:  Incorrect Configuration\n\
           - 20: Database Connection Error",
-        colour_codes::ErrorColour,
-        colour_codes::WarningColour,
-        colour_codes::CautionColour,
-        colour_codes::SuccessColour,
-        colour_codes::InfoColour,
-        colour_codes::FieldColour,
-        colour_codes::LocationColour,
-        colour_codes::ResetColour
+        ColourCode::Error,
+        ColourCode::Warning,
+        ColourCode::Caution,
+        ColourCode::Success,
+        ColourCode::Info,
+        ColourCode::Field,
+        ColourCode::Location,
+        ColourCode::Reset
     )
 }

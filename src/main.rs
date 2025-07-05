@@ -1,6 +1,7 @@
 // --== MODULE IMPORTS ==-- //
     mod utils;
     use utils::{
+        misc::colour_codes::ColourCode,
         startup::parse_arguments::{
             self,
             ConfigPathKey
@@ -12,16 +13,15 @@
         context_keys,
         runtime_client
     };
-
 // ==--
 
-use core::panic;
 // --== CRATE IMPORTS ==-- //
     
     // STD & CORE
         use std::{
             env, fs, io, path::PathBuf, process
         };
+        use core::panic;
 
     // SERENITY
         use serenity::{
@@ -39,8 +39,6 @@ use core::panic;
 
     // TOML
         use toml::{Table, Value};
-
-    use crate::utils::misc::colour_codes;
 // ==--
 
 #[tokio::main]
@@ -69,11 +67,11 @@ async fn main() {
                     Err(why) => {
                         println!(
                             "{}Error{}: Unable to fetch current directory `{}{}{}`",
-                            color::Red.fg_str(),
-                            color::Reset.fg_str(),
-                            color::LightBlue.fg_str(),
+                            ColourCode::Error,
+                            ColourCode::Reset,
+                            ColourCode::Info,
                             why,
-                            color::Reset.fg_str()
+                            ColourCode::Reset
                         );
                         process::exit(1)
                     }
@@ -85,10 +83,10 @@ async fn main() {
                         if why.kind() == io::ErrorKind::NotFound {
                             println!(
                                 "{}Error{}: Missing config file, invoke with `{}config generate{}` to generate placeholder config file",
-                                color::Red.fg_str(),
-                                color::Reset.fg_str(),
-                                color::LightBlue.fg_str(),
-                                color::Reset.fg_str()
+                                ColourCode::Error,
+                                ColourCode::Reset,
+                                ColourCode::Field,
+                                ColourCode::Reset
                             );
                             process::exit(1)
                         }
@@ -96,11 +94,11 @@ async fn main() {
                         // For some reason we cannot access the bot config, let us notify the user
                         println!(
                             "{}Error{}: Cannot access config file `{}{}{}`",
-                            color::Red.fg_str(),
-                            color::Reset.fg_str(),
-                            color::LightBlue.fg_str(),
+                            ColourCode::Error,
+                            ColourCode::Reset,
+                            ColourCode::Info,
                             why.kind(),
-                            color::Reset.fg_str()
+                            ColourCode::Reset
                         );
                         process::exit(1)
                     },
@@ -115,11 +113,11 @@ async fn main() {
             Err(why) => {
                 println!(
                     "{}Error{}: Failed to read config file: `{}{}{}`",
-                    colour_codes::ErrorColour,
-                    colour_codes::ResetColour,
-                    colour_codes::InfoColour,
+                    ColourCode::Error,
+                    ColourCode::Reset,
+                    ColourCode::Info,
                     why,
-                    colour_codes::ResetColour
+                    ColourCode::Reset
                 );
                 process::exit(1);
             }
@@ -131,11 +129,11 @@ async fn main() {
             Err(why) => {
                 println!(
                     "{}Error{}: Failed to parse configuration data. Is the config file malformed?: \n{}{}{}",
-                    colour_codes::ErrorColour,
-                    colour_codes::ResetColour,
-                    colour_codes::InfoColour,
+                    ColourCode::Error,
+                    ColourCode::Reset,
+                    ColourCode::Info,
                     why,
-                    colour_codes::ResetColour
+                    ColourCode::Reset
                 );
                 process::exit(1);
             }
@@ -162,28 +160,28 @@ async fn main() {
         if !missing_fields.is_empty() {
             print!(
                 "{}Error{}: Config file is either missing fields, or they are incorrect. Offending fields: `{}",
-                colour_codes::ErrorColour,
-                colour_codes::ResetColour,
-                colour_codes::InfoColour
+                ColourCode::Error,
+                ColourCode::Reset,
+                ColourCode::Info
             );
 
             for (idx, field) in missing_fields.iter().enumerate() {
                 if missing_fields.len()-1 == idx {
                     print!("{field}");
                 } else {
-                    print!("{field}{}, {}", colour_codes::ResetColour, colour_codes::InfoColour);
+                    print!("{field}{}, {}", ColourCode::Reset, ColourCode::Info);
                 }
             }
             println!(
                 "{}`",
-                colour_codes::ResetColour
+                ColourCode::Reset
             );
             process::exit(1);
         }
         println!(
             "{}Ok!{}",
-            colour_codes::SuccessColour,
-            colour_codes::ResetColour
+            ColourCode::Success,
+            ColourCode::Reset
         );
 
         // Store config data into variables
@@ -206,19 +204,19 @@ async fn main() {
             Err(why) => {
                 println!(
                     "{}Error{}: Unable to connect to database: `{}{}{}`",
-                    colour_codes::ErrorColour,
-                    colour_codes::ResetColour,
-                    colour_codes::InfoColour,
+                    ColourCode::Error,
+                    ColourCode::Reset,
+                    ColourCode::Info,
                     why,
-                    colour_codes::ResetColour
+                    ColourCode::Reset
                 );
                 process::exit(20);
             }
         };
         println!(
             "{}Ok!{}",
-            colour_codes::SuccessColour,
-            colour_codes::ResetColour
+            ColourCode::Success,
+            ColourCode::Reset
         );
     // ==--
     
@@ -226,15 +224,15 @@ async fn main() {
     
         print!("Running database migration script... ");
         match sqlx::migrate!("./src/migrations").run(&db_connection).await {
-            Ok(()) => println!("{}Ok!{}", colour_codes::SuccessColour, colour_codes::ResetColour),
+            Ok(()) => println!("{}Ok!{}", ColourCode::Success, ColourCode::Reset),
             Err(why) => {
                 println!(
                     "{}Error{}: Unable to preform database migration: `{}{}{}`",
-                    colour_codes::ErrorColour,
-                    colour_codes::ResetColour,
-                    colour_codes::InfoColour,
+                    ColourCode::Error,
+                    ColourCode::Reset,
+                    ColourCode::Info,
                     why,
-                    colour_codes::ResetColour
+                    ColourCode::Reset
                 );
             }
         }
@@ -253,8 +251,8 @@ async fn main() {
 
         println!(
             "{}Ok!{}",
-            colour_codes::SuccessColour,
-            colour_codes::ResetColour
+            ColourCode::Success,
+            ColourCode::Reset
         );
     // ==--
     
@@ -272,8 +270,8 @@ async fn main() {
 
                 println!(
                     "{}Ok!{}",
-                    colour_codes::SuccessColour,
-                    colour_codes::ResetColour
+                    ColourCode::Success,
+                    ColourCode::Reset
                 );
 
                 client_builder
@@ -281,11 +279,11 @@ async fn main() {
             Err(why) => {
                 println!(
                     "{}Error{}: Failed to build client: `{}{}{}`",
-                    colour_codes::ErrorColour,
-                    colour_codes::ResetColour,
-                    colour_codes::InfoColour,
+                    ColourCode::Error,
+                    ColourCode::Reset,
+                    ColourCode::Info,
                     why,
-                    colour_codes::ResetColour
+                    ColourCode::Reset
                 );
                 process::exit(3);
             }
@@ -293,21 +291,21 @@ async fn main() {
     // ==--
     
     // --== STARTING CLIENT ==-- //
-        println!("Starting Client... {}Ok!{}", colour_codes::SuccessColour, colour_codes::ResetColour);
+        println!("Starting Client... {}Ok!{}", ColourCode::Success, ColourCode::Reset);
         let client_exit = bot_client.start().await;
         match client_exit {
             Ok(()) => {
-                println!("{}Client exited sucessfully{}", colour_codes::SuccessColour, colour_codes::ResetColour);
+                println!("{}Client exited sucessfully{}", ColourCode::Success, ColourCode::Reset);
                 process::exit(0);
             },
             Err(why) => {
                 println!(
                     "{}Error{}: Failed to start client `{}{}{}`",
-                    colour_codes::ErrorColour,
-                    colour_codes::ResetColour,
-                    colour_codes::InfoColour,
+                    ColourCode::Error,
+                    ColourCode::Reset,
+                    ColourCode::Info,
                     why,
-                    colour_codes::ResetColour
+                    ColourCode::Reset
                 );
                 process::exit(1);
             }

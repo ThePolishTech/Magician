@@ -2,7 +2,7 @@
 
 // --== MODULE IMPORTS ==-- //
     use crate::utils::misc::{
-        colour_codes, help_menu::{self, help_menu}, template_config
+        colour_codes::ColourCode, help_menu::{self, help_menu}, template_config
     };
 // ==--
 
@@ -66,10 +66,10 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                         None => {
                             println!(
                                 "{}Error{}: {}Config{}: Path not specified",
-                                colour_codes::ErrorColour,
-                                colour_codes::ResetColour,
-                                colour_codes::LocationColour,
-                                colour_codes::ResetColour
+                                ColourCode::Error,
+                                ColourCode::Reset,
+                                ColourCode::Location,
+                                ColourCode::Reset
                             );
                             process::exit(1);
                         }
@@ -79,26 +79,26 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                             io::ErrorKind::NotFound => {
                                 println!(
                                     "{}Error{}: {}Config{}: Failed to open config file `{}{}{}`; config file missing",
-                                    colour_codes::ErrorColour,
-                                    colour_codes::ResetColour,
-                                    colour_codes::LocationColour,
-                                    colour_codes::ResetColour,
-                                    colour_codes::FieldColour,
+                                    ColourCode::Error,
+                                    ColourCode::Reset,
+                                    ColourCode::Location,
+                                    ColourCode::Reset,
+                                    ColourCode::Field,
                                     queried_path,
-                                    colour_codes::ResetColour
+                                    ColourCode::Reset
                                 );
                                 process::exit(1);
                             },
                             _ => {
                                 println!(
                                     "{}Error{}: {}Config{}: Failed to open config file: {}{}{}",
-                                    colour_codes::ErrorColour,
-                                    colour_codes::ResetColour,
-                                    colour_codes::LocationColour,
-                                    colour_codes::ResetColour,
-                                    colour_codes::InfoColour,
+                                    ColourCode::Error,
+                                    ColourCode::Reset,
+                                    ColourCode::Location,
+                                    ColourCode::Reset,
+                                    ColourCode::Info,
                                     why,
-                                    colour_codes::ResetColour
+                                    ColourCode::Reset
                                 );
                                 process::exit(1);
                             }
@@ -115,8 +115,8 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
 
                     println!(
                         "{}Info{}: Generating config file...",
-                        colour_codes::InfoColour,
-                        colour_codes::ResetColour
+                        ColourCode::Info,
+                        ColourCode::Reset
                     );
 
                     let mut generated_file = match fs::File::create_new("bot_config.toml") {
@@ -125,23 +125,23 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                             if why.kind() == io::ErrorKind::AlreadyExists {
                                 println!(
                                     "{}Error{}: {}Config{}: Attempting to generate already existing config file",
-                                    colour_codes::ErrorColour,
-                                    colour_codes::ResetColour,
-                                    colour_codes::LocationColour,
-                                    colour_codes::ResetColour
+                                    ColourCode::Error,
+                                    ColourCode::Reset,
+                                    ColourCode::Location,
+                                    ColourCode::Reset
                                 );
                                 process::exit(1);
                             }
 
                             println!(
                                 "{}Error{}: {}Config{}: Cannot generate conifg file: `{}{}{}`",
-                                colour_codes::ErrorColour,
-                                colour_codes::ResetColour,
-                                colour_codes::LocationColour,
-                                colour_codes::ResetColour,
-                                colour_codes::InfoColour,
+                                ColourCode::Error,
+                                ColourCode::Reset,
+                                ColourCode::Location,
+                                ColourCode::Reset,
+                                ColourCode::Info,
                                 why,
-                                colour_codes::ResetColour
+                                ColourCode::Reset
                             );
                             process::exit(1);
                         }
@@ -150,21 +150,21 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                     if let Err(why) = generated_file.write_all( template_config::TEMPLATE.as_bytes() ) {
                         println!(
                             "{}Warning{}: Config file generated, but failed to insert values. Consider removing `{}bot_config.toml{}` and retrying. Error reason: `{}{}{}`",
-                            colour_codes::WarningColour,
-                            colour_codes::ResetColour,
-                            colour_codes::FieldColour,
-                            colour_codes::ResetColour,
-                            colour_codes::InfoColour,
+                            ColourCode::Warning,
+                            ColourCode::Reset,
+                            ColourCode::Field,
+                            ColourCode::Reset,
+                            ColourCode::Info,
                             why,
-                            colour_codes::ResetColour
+                            ColourCode::Reset
                         );
                         process::exit(1);
                     };
 
                     println!(
                         "{}Caution{}: Generated config file contains placeholder values, please remember to update them",
-                        colour_codes::CautionColour,
-                        colour_codes::ResetColour
+                        ColourCode::Caution,
+                        ColourCode::Reset
                     );
                     process::exit(0);
                 },
@@ -173,13 +173,13 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                 Some(unknown_secondary_argument) => {
                     println!(
                         "{}Error{}: Unknown command option: `{}{}{}` Consider invoking with `{}help{}` for a list of commands",
-                        colour_codes::ErrorColour,
-                        colour_codes::ResetColour,
-                        colour_codes::FieldColour,
+                        ColourCode::Error,
+                        ColourCode::Reset,
+                        ColourCode::Field,
                         unknown_secondary_argument,
-                        colour_codes::ResetColour,
-                        colour_codes::InfoColour,
-                        colour_codes::ResetColour
+                        ColourCode::Reset,
+                        ColourCode::Info,
+                        ColourCode::Reset
                     );
                     process::exit(1);
 
@@ -189,10 +189,10 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                 None => {
                     println!(
                         "{}Error{}: Missing command option. Consider invoking with `{}help{}` for a list of commands",
-                        colour_codes::ErrorColour,
-                        colour_codes::ResetColour,
-                        colour_codes::InfoColour,
-                        colour_codes::ResetColour
+                        ColourCode::Error,
+                        ColourCode::Reset,
+                        ColourCode::Info,
+                        ColourCode::Reset
                     );
                     process::exit(1);
                 }
@@ -205,13 +205,13 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
             // must be an unknown option. We shall report this to the user and exit the program
             println!(
                 "{}Error{}: Unknown command: `{}{}{}`. Consider invoking with `{}help{}` for list of commands",
-                colour_codes::ErrorColour,
-                colour_codes::ResetColour,
-                colour_codes::FieldColour,
+                ColourCode::Error,
+                ColourCode::Reset,
+                ColourCode::Field,
                 unknown_argument,
-                colour_codes::ResetColour,
-                colour_codes::InfoColour,
-                colour_codes::ResetColour
+                ColourCode::Reset,
+                ColourCode::Info,
+                ColourCode::Reset
             );
             process::exit(1);
         },
