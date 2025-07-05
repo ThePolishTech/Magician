@@ -2,7 +2,7 @@
 
 // --== MODULE IMPORTS ==-- //
     use crate::utils::misc::{
-        colour_codes::ColourCode, help_menu::{self, help_menu}, template_config
+        colour_codes::ColourCode, help_menu::help_menu, template_config
     };
 // ==--
 

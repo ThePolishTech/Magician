@@ -1,7 +1,10 @@
 // --== MODULE IMPORTS ==-- //
     mod utils;
     use utils::{
-        misc::colour_codes::ColourCode,
+        misc::{
+            colour_codes::ColourCode,
+            title_splash::make_title_splash
+        },
         startup::parse_arguments::{
             self,
             ConfigPathKey
@@ -29,9 +32,6 @@
             model::gateway::GatewayIntents
         };
 
-    // TERMION
-        use termion::color;
-
     // SQLX
         use sqlx::{
             sqlite::SqliteConnectOptions, SqlitePool
@@ -44,6 +44,8 @@
 #[tokio::main]
 async fn main() {
 
+    
+
     // --== PROCESS ARGS ==-- //
     
         // Our first order of buisness is collecting arguments passed to our program. Thanks to this we
@@ -52,6 +54,9 @@ async fn main() {
         let post_parse_data = parse_arguments::parse_arguments(inbound_arguments.clone());
     // ==--
     
+    println!( "{}",
+        make_title_splash()
+    ); 
 
     // --== READ CONFIG ==-- //
 
@@ -190,7 +195,7 @@ async fn main() {
         let wakeup_channel_id =
             match &config_data["wakeup_channel_id"] { Value::Integer(id) => *id as u64, _ => panic!("Code failed to validate field `wakeup_channel_id`") };
     // ==--
-    
+
     // --== OPEN DATABASE ==-- //
     
         print!("Opening connection to database... ");
@@ -292,6 +297,7 @@ async fn main() {
     
     // --== STARTING CLIENT ==-- //
         println!("Starting Client... {}Ok!{}", ColourCode::Success, ColourCode::Reset);
+        println!("\n\nBegin Log:");
         let client_exit = bot_client.start().await;
         match client_exit {
             Ok(()) => {
