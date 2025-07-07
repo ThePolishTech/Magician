@@ -1,7 +1,9 @@
+#![allow(clippy::single_match)]
 // --== MODULE IMPORTS ==-- //
 
     use crate::{
         runtime::{
+            commands,
             context_keys,
             runtime_client
         }, 
@@ -16,7 +18,7 @@
 
     // SERENITY
         use serenity::{
-            all::{CreateEmbed, Timestamp}, async_trait, builder::CreateMessage, client::{
+            all::{Command, CreateEmbed, Interaction, Timestamp}, async_trait, builder::CreateMessage, client::{
                 Context,
                 EventHandler
             }, model::{
@@ -80,6 +82,42 @@ impl EventHandler for runtime_client::RuntimeClient {
         println!( "{}",
             create_log_message("Bot Online!", ColourCode::Info)
         );
+
+        // --== REGISTER COMMANDS TO GATEWAY ==-- //
+            let slash_commands = vec![
+                commands::profile::build()
+            ];
+
+            match Command::set_global_commands(&ctx.http, slash_commands).await {
+                Ok(_commands) => {
+                    println!( "{}", create_log_message(
+                        "Registered global commands!",
+                        ColourCode::Success
+                    ))
+                },
+                Err(why) => {
+                    println!( "{}", create_log_message(
+                        format!("Failed to register global commands: `{}{why}{}`", ColourCode::Info, ColourCode::Reset),
+                        ColourCode::Error
+                    ))
+                }
+            }
+        // ==--
     }
+    // fn ready()
+
+    async fn interaction_create( &self, ctx: Context, interaction_data: Interaction ) {
+
+        if let Interaction::Command(command_interaction_data) = interaction_data {
+
+            match command_interaction_data.data.name.as_str() {
+                "profile" => commands::profile::run( self, ctx, command_interaction_data ),
+                _ => {}
+            }
+            // match command_interaction_data.data.name
+        }
+        // match interaction_data
+    }
+    // fn interaction_create()
 }
 
