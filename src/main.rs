@@ -1,13 +1,13 @@
 // --== MODULE IMPORTS ==-- //
     mod utils;
     use utils::{
-        misc::{
-            colour_codes::ColourCode,
+        misc::colour_codes::ColourCode,
+        startup::{
+            parse_arguments::{
+                self,
+                ConfigPathKey
+            },
             title_splash::make_title_splash
-        },
-        startup::parse_arguments::{
-            self,
-            ConfigPathKey
         },
     };
 
