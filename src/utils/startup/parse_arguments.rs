@@ -11,7 +11,7 @@
     // STD & CORE
     use std::{
         fs,
-        process,
+        process::ExitCode,
         path::PathBuf,
         io::{self, Write}
     };
@@ -39,7 +39,7 @@ use serenity::prelude::{
 /// # Exits
 /// This function will exit the process with a value of `1` in the case of invalid inputs, or
 /// erroneous states
-pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
+pub fn parse_arguments( arguments_in: Vec<String> ) -> Result<TypeMap, ExitCode> {
 
     // Because what we expect to be returned in terms of values mutable by user selected args is
     // inexhaustive, aka. might change in the future, we will just return a typemap and publish
@@ -53,7 +53,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
             if primary_argument == "help" || primary_argument == "--help"
         => {
             println!( "{}", help_menu() );
-            process::exit(1);
+            return Err( ExitCode::from(1) );
         },
         // [1] Help
         
@@ -71,7 +71,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                                 ColourCode::Location,
                                 ColourCode::Reset
                             );
-                            process::exit(1);
+                            return Err( ExitCode::from(1) );
                         }
                     };
                     if let Err(why) = fs::File::open(queried_path) {
@@ -87,7 +87,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                                     queried_path,
                                     ColourCode::Reset
                                 );
-                                process::exit(1);
+                                return Err( ExitCode::from(1) );
                             },
                             _ => {
                                 println!(
@@ -100,7 +100,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                                     why,
                                     ColourCode::Reset
                                 );
-                                process::exit(1);
+                                return Err( ExitCode::from(1) );
                             }
                         }
                     } else {
@@ -130,7 +130,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                                     ColourCode::Location,
                                     ColourCode::Reset
                                 );
-                                process::exit(1);
+                                return Err( ExitCode::from(1) );
                             }
 
                             println!(
@@ -143,7 +143,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                                 why,
                                 ColourCode::Reset
                             );
-                            process::exit(1);
+                            return Err( ExitCode::from(1) );
                         }
                     };
 
@@ -158,7 +158,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                             why,
                             ColourCode::Reset
                         );
-                        process::exit(1);
+                        return Err( ExitCode::from(1) );
                     };
 
                     println!(
@@ -166,7 +166,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                         ColourCode::Caution,
                         ColourCode::Reset
                     );
-                    process::exit(0);
+                    return Err( ExitCode::from(0) );
                 },
                 // [1] Config [2] generate
 
@@ -181,7 +181,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                         ColourCode::Info,
                         ColourCode::Reset
                     );
-                    process::exit(1);
+                    return Err( ExitCode::from(1) );
 
                 },
                 // [1] Config [2] Unknown
@@ -194,7 +194,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                         ColourCode::Info,
                         ColourCode::Reset
                     );
-                    process::exit(1);
+                    return Err( ExitCode::from(1) );
                 }
             }
         }
@@ -213,7 +213,7 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
                 ColourCode::Info,
                 ColourCode::Reset
             );
-            process::exit(1);
+            return Err( ExitCode::from(1) );
         },
         // [1] Unknown
 
@@ -224,5 +224,5 @@ pub fn parse_arguments( arguments_in: Vec<String> ) -> TypeMap {
     }
 
 
-    return_typemap
+    Ok(return_typemap)
 }

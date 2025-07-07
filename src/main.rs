@@ -22,7 +22,7 @@
     
     // STD & CORE
         use std::{
-            env, fs, io, path::PathBuf, process
+            env, fs, io, path::PathBuf, process::ExitCode
         };
         use core::panic;
 
@@ -42,7 +42,7 @@
 // ==--
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode{
 
     
 
@@ -51,7 +51,10 @@ async fn main() {
         // Our first order of buisness is collecting arguments passed to our program. Thanks to this we
         // will be able to bake in some launch paramaters
         let inbound_arguments: Vec<String> = env::args().collect();
-        let post_parse_data = parse_arguments::parse_arguments(inbound_arguments.clone());
+        let post_parse_data = match parse_arguments::parse_arguments(inbound_arguments.clone()) {
+            Ok(data_typemap) => data_typemap,
+            Err(exit_code) => return exit_code
+        };
     // ==--
     
     println!( "{}",
@@ -78,7 +81,7 @@ async fn main() {
                             why,
                             ColourCode::Reset
                         );
-                        process::exit(1)
+                        return ExitCode::from(1);
                     }
                 };
 
@@ -93,7 +96,7 @@ async fn main() {
                                 ColourCode::Field,
                                 ColourCode::Reset
                             );
-                            process::exit(1)
+                            return ExitCode::from(1)
                         }
 
                         // For some reason we cannot access the bot config, let us notify the user
@@ -105,7 +108,7 @@ async fn main() {
                             why.kind(),
                             ColourCode::Reset
                         );
-                        process::exit(1)
+                        return ExitCode::from(1)
                     },
                     Ok(_) => current_dir.join("bot_config.toml")
                 }
@@ -124,7 +127,7 @@ async fn main() {
                     why,
                     ColourCode::Reset
                 );
-                process::exit(1);
+                return ExitCode::from(1);
             }
         };
 
@@ -140,7 +143,7 @@ async fn main() {
                     why,
                     ColourCode::Reset
                 );
-                process::exit(1);
+                return ExitCode::from(1);
             }
         };
         
@@ -181,7 +184,7 @@ async fn main() {
                 "{}`",
                 ColourCode::Reset
             );
-            process::exit(1);
+            return ExitCode::from(1);
         }
         println!(
             "{}Ok!{}",
@@ -215,7 +218,7 @@ async fn main() {
                     why,
                     ColourCode::Reset
                 );
-                process::exit(20);
+                return ExitCode::from(20);
             }
         };
         println!(
@@ -239,7 +242,7 @@ async fn main() {
                     why,
                     ColourCode::Reset
                 );
-                process::exit(1);
+                return ExitCode::from(1);
             }
         }
     // ==--
@@ -291,7 +294,7 @@ async fn main() {
                     why,
                     ColourCode::Reset
                 );
-                process::exit(3);
+                return ExitCode::from(3);
             }
         };
     // ==--
@@ -303,7 +306,7 @@ async fn main() {
         match client_exit {
             Ok(()) => {
                 println!("{}Client exited sucessfully{}", ColourCode::Success, ColourCode::Reset);
-                process::exit(0);
+                return ExitCode::from(0);
             },
             Err(why) => {
                 println!(
@@ -314,7 +317,7 @@ async fn main() {
                     why,
                     ColourCode::Reset
                 );
-                process::exit(1);
+                return ExitCode::from(1);
             }
         }
     //
