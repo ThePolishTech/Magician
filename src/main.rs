@@ -1,14 +1,14 @@
 // --== MODULE IMPORTS ==-- //
     mod utils;
-    use utils::{
-        misc::colour_codes::ColourCode,
-        startup::{
-            parse_arguments::{
-                self,
-                ConfigPathKey
-            },
-            title_splash::make_title_splash
-        },
+    use utils::misc::colour_codes::ColourCode;
+
+    mod startup;
+    use startup::{
+        title_splash::make_title_splash,
+        parse_arguments::{
+            parse_arguments,
+            ConfigPathKey
+        }
     };
 
     mod runtime;
@@ -51,7 +51,7 @@ async fn main() -> ExitCode{
         // Our first order of buisness is collecting arguments passed to our program. Thanks to this we
         // will be able to bake in some launch paramaters
         let inbound_arguments: Vec<String> = env::args().collect();
-        let post_parse_data = match parse_arguments::parse_arguments(inbound_arguments.clone()) {
+        let post_parse_data = match parse_arguments(inbound_arguments.clone()) {
             Ok(data_typemap) => data_typemap,
             Err(exit_code) => return exit_code
         };
