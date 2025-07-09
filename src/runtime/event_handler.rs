@@ -111,7 +111,7 @@ impl EventHandler for runtime_client::RuntimeClient {
         if let Interaction::Command(command_interaction_data) = interaction_data {
 
             match command_interaction_data.data.name.as_str() {
-                "profile" => commands::profile::run( self, ctx, command_interaction_data ),
+                "profile" => commands::profile::run( self, ctx, command_interaction_data ).await,
                 _ => {}
             }
             // match command_interaction_data.data.name
