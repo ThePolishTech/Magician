@@ -50,8 +50,8 @@ pub async fn run( runtime_client: &RuntimeClient, ctx: Context, interaction_data
 
     // Based on the sub command's name, delegate to the correct execution unit
     match sub_command_name.as_str() {
-        "register" => profile_commands::register::run( &runtime_client, ctx, interaction_data).await,    
-        "deregister" => {},
+        "register" => profile_commands::register::run( &runtime_client, ctx, interaction_data ).await,    
+        "deregister" => profile_commands::deregister::run( &runtime_client, ctx, interaction_data ).await,
         // In the case that an unknown sub command is recived, inform the terminal of this
         // occurance
         unimplemented_subcommand => println!( "{}", create_log_message(

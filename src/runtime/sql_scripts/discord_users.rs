@@ -6,7 +6,7 @@ use sqlx::{
 };
 
 pub async fn get_by_user_id(database_conn_pool: &SqlitePool, user_id: u64) -> Result<Option<sqlx::sqlite::SqliteRow>, Error> {
-    sqlx::query("SELECT * FROM DiscordUsers WHERE pk_discordID = $1")
+    sqlx::query("SELECT * FROM DiscordUsers WHERE pk_discordID = $1;")
         .bind(user_id as i64)
         .fetch_optional(database_conn_pool)
         .await
@@ -19,3 +19,11 @@ pub async fn add_user(database_conn_pool: &SqlitePool, user_id: u64) -> Result<S
         .execute(database_conn_pool)
         .await
 }
+
+pub async fn remove_user(database_conn_pool: &SqlitePool, user_id: u64) -> Result<SqliteQueryResult, Error> {
+    sqlx::query("DELETE FROM DiscordUsers WHERE pk_discordID = $1;")
+        .bind(user_id as i64)
+        .execute(database_conn_pool)
+        .await
+}
+
