@@ -1,8 +1,8 @@
 pub fn make_title_splash() -> String {
     let title = 
-"  // xxxxxxxxxxxxxxxxxxx //
- // --== MAGICIAN == -- //
-// xxxxxxxxxxxxxxxxxxx //
+"  // xxxxxxxxxxxxxxxxxx //
+ // --== MAGICIAN ==-- //
+// xxxxxxxxxxxxxxxxxx //
     ";
     
     format!(
