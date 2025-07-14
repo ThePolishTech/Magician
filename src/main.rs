@@ -22,7 +22,7 @@
     
     // STD & CORE
         use std::{
-            env, fs, io, path::PathBuf, process::ExitCode
+            collections::HashMap, env, fs, io, path::PathBuf, process::ExitCode
         };
         use core::panic;
 
@@ -275,6 +275,7 @@ async fn main() -> ExitCode{
                 {
                     let mut data_write = client_builder.data.write().await;
                     data_write.insert::<context_keys::WakeupChannelIdKey>( wakeup_channel_id );
+                    data_write.insert::<context_keys::CharacterBuildingDataKey>( HashMap::new() );
                 }
 
                 println!(

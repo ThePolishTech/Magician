@@ -1,6 +1,8 @@
 #![allow(clippy::single_match)]
 // --== MODULE IMPORTS ==-- //
 
+    use std::path::Component;
+
     use crate::{
         runtime::{
             commands,
@@ -22,7 +24,7 @@
                 Context,
                 EventHandler
             }, model::{
-                gateway::Ready, id::ChannelId
+                gateway::Ready, id::ChannelId, application::ComponentInteractionDataKind
             }
         };
 // ==--
@@ -85,7 +87,8 @@ impl EventHandler for runtime_client::RuntimeClient {
 
         // --== REGISTER COMMANDS TO GATEWAY ==-- //
             let slash_commands = vec![
-                commands::profile::build()
+                commands::profile::build(),
+                commands::character::build()
             ];
 
             match Command::set_global_commands(&ctx.http, slash_commands).await {
@@ -108,16 +111,66 @@ impl EventHandler for runtime_client::RuntimeClient {
 
     async fn interaction_create( &self, ctx: Context, interaction_data: Interaction ) {
 
-        if let Interaction::Command(command_interaction_data) = interaction_data {
+        match interaction_data {
 
-            match command_interaction_data.data.name.as_str() {
-                "profile" => commands::profile::run( self, ctx, command_interaction_data ).await,
+            Interaction::Command(command_interaction_data) => match command_interaction_data.data.name.as_str() {
+                "profile"   => commands::profile::run( self, ctx, command_interaction_data ).await,
+                "character" => commands::character::run( self, ctx, command_interaction_data ).await,
                 _ => {}
-            }
-            // match command_interaction_data.data.name
+            },
+            // match command
+
+            Interaction::Component(component_interaction_data) => {
+                if let ComponentInteractionDataKind::Button = component_interaction_data.data.kind {
+                    let component_id_clone = component_interaction_data
+                        .data
+                        .custom_id
+                        .clone();
+
+                    let component_id_items: Vec<&str> = component_id_clone
+                        .split("|")
+                        .collect();
+
+                    if component_id_items.is_empty() {
+                        println!( "{}", create_log_message(
+                                format!(
+                                    "{}EventHandler::interaction_create::component::button{}: Recived mallformed custom_id: `{}{}{}`",
+                                    ColourCode::Location,
+                                    ColourCode::Reset,
+                                    ColourCode::Info,
+                                    component_interaction_data.data.custom_id,
+                                    ColourCode::Reset
+                                ),
+                                ColourCode::Warning
+                        ))
+                    }
+
+                    match component_id_items[0] {
+                        "character" => commands::character::handle_component_interaction( component_interaction_data, ctx, component_id_items ).await,
+                        unknown_component_interaction => println!( "{}", create_log_message(
+                                format!(
+                                    "{}EventHandler::interaction_create::component::button{}: Recieved unknown component interaction: `{}{}{}`",
+                                    ColourCode::Location,
+                                    ColourCode::Reset,
+                                    ColourCode::Info,
+                                    unknown_component_interaction,
+                                    ColourCode::Reset
+                                ),
+                                ColourCode::Warning
+                        ))
+
+                    }
+                },
+                // match component
+       
+                Interaction::Modal()
+            },
+            _ => {}
         }
         // match interaction_data
     }
     // fn interaction_create()
+    
+    
 }
 
