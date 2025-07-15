@@ -66,37 +66,10 @@ pub async fn run( runtime_client: &RuntimeClient, ctx: Context, interaction_data
 
 
 pub async fn handle_component_interaction( interaction_data: ComponentInteraction, ctx: Context, split_custom_id: Vec<&str> ) {
-    if split_custom_id.get(1).is_none() {
-        println!( "{}", create_log_message(
-                format!(
-                    "{}commands::character::handle_component_interaction{}: Recieved malformed custom_id: `{}{}{}`",
-                    ColourCode::Location,
-                    ColourCode::Reset,
-                    ColourCode::Info,
-                    interaction_data.data.custom_id,
-                    ColourCode::Reset
-                ),
-                ColourCode::Warning
-        ));
-        return;
-    }
-
     match split_custom_id[1] {
         "create" => character_commands::create::handle_component_interaction(interaction_data, ctx, split_custom_id).await,
-        // In case an unknown component interaction is recieved, notify the terminal
-        unknown_component_interaction => println!( "{}", create_log_message(
-                format!(
-                    "{}commands::character{}: Recieved unknown component interaction: `{}{}{}`",
-                    ColourCode::Location,
-                    ColourCode::Reset,
-                    ColourCode::Info,
-                    unknown_component_interaction,
-                    ColourCode::Reset
-                ),
-                ColourCode::Warning
-        ))
+        _ => {}
     }
-
 }
 
 

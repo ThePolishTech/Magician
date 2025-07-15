@@ -1,49 +1,60 @@
-#![allow(clippy::single_match)]
+use std::collections::HashMap;
 
 use crate::{
-    runtime::{context_keys, runtime_client::RuntimeClient, sql_scripts},
-    utils::misc::{colour_codes::ColourCode, logging::create_log_message},
+    runtime::{
+        runtime_client::RuntimeClient,
+        context_keys
+    },
+    utils::misc::{
+        colour_codes::ColourCode, 
+        logging::create_log_message
+    },
 };
 
 use serenity::{
-    all::InputText, builder::{CreateActionRow, CreateButton, CreateEmbed, CreateInputText, CreateInteractionResponse, CreateInteractionResponseMessage, CreateModal, EditMessage}, client::Context, model::application::{ButtonStyle, CommandInteraction, ComponentInteraction, InputTextStyle, ModalInteraction, ActionRowComponent}
+    all::{CreateEmbedFooter, InputText},
+    builder::{
+        CreateActionRow, CreateButton, CreateEmbed, CreateInputText, CreateInteractionResponse, CreateInteractionResponseMessage, CreateModal, EditMessage
+    }, 
+    client::Context, 
+    model::application::{
+        ActionRowComponent, ButtonStyle, CommandInteraction, ComponentInteraction, InputTextStyle, ModalInteraction
+    }
 };
-use termion::color::Color;
 
-pub async fn run(
-    runtime_client: &RuntimeClient,
-    ctx: Context,
-    interaction_data: CommandInteraction,
-) {
-    let invoker_id  = interaction_data.user.id.get();
+pub async fn run( runtime_client: &RuntimeClient, ctx: Context, interaction_data: CommandInteraction ) {
+    let invoker_id = interaction_data.user.id.get();
 
     let response = 'response: {
-        // Check if the user is already building a character
+
+        // First see if the player already has a character building process running, if so send a
+        // notofication
         {
-            let mut context_data = ctx.data.write().await;
-            let character_building_hashmap = context_data.get_mut::<context_keys::CharacterBuildingDataKey>()
-                .expect("Key already inserted at startup");
+            let context_data_read = ctx.data.read().await;
+            let character_building_data = context_data_read.get::<context_keys::CharacterBuildingDataKey>().expect("Key inserted at startup");
 
-            if character_building_hashmap.contains_key(&invoker_id) {
-                break 'response CreateInteractionResponseMessage::new().embed(
-                    CreateEmbed::new()
-                        .title("You're already building a character")
-                        .description("Consider canceling your active build")
-                        .colour(ColourCode::Caution.to_embed_colour())
-                )
+            if character_building_data.contains_key(&invoker_id) {
+
+                let embed = CreateEmbed::new()
+                    .title("You're already building a character")
+                    .description("You can only have one build process running at a time. If you want to start over, cancel your previous process")
+                    .colour(ColourCode::Caution.to_embed_colour());
+
+                break 'response CreateInteractionResponseMessage::new().embed(embed);
             }
-
-            character_building_hashmap.insert(invoker_id, context_keys::CharacterCreationData::new());
         }
+
+
+        // Send stage 0 embed
+        let embed = CreateEmbed::new()
+            .title("Welcome to character creation!")
+            .description("Press `Continue` to advance to the next steps, or `Cancel` at any point in time to stop")
+            .colour(ColourCode::Location.to_embed_colour());
 
         let buttons = CreateActionRow::Buttons(vec![
             CreateButton::new(format!("character|create|continue|{invoker_id}|0"))
                 .style(ButtonStyle::Primary)
-                .label("Continue"),     // Buttons require an ID when created, this allows us to
-                                        // embed some extra information, for instance, which
-                                        // command created it, what function it serves, the ID of
-                                        // the user who caused it's creation, and the step to which
-                                        // it belongs to
+                .label("Continue"),
 
             CreateButton::new(format!("character|create|cancel|{invoker_id}|0"))
                 .style(ButtonStyle::Secondary)
@@ -51,29 +62,25 @@ pub async fn run(
         ]);
 
         CreateInteractionResponseMessage::new()
-            .embed(CreateEmbed::new()
-                .title("Temp")
-                .colour(ColourCode::Location.to_embed_colour())
-            )
-            .components(vec![buttons]) 
-    }; // let response_embed = {...}
+            .embed(embed)
+            .components(vec![buttons])
+    };
 
-    let response = CreateInteractionResponse::Message(response);
-    let response_payload = interaction_data.create_response(&ctx.http, response);
+    let response_payload = interaction_data.create_response(
+        &ctx.http,
+        CreateInteractionResponse::Message(response)
+    );
 
-    if let Err(response_send_err) = response_payload.await {
+    if let Err(why) = response_payload.await {
         println!( "{}", create_log_message(
                 format!(
-                    "{}character::create{}: Failed to send response: `{}{}{}`",
-                    ColourCode::Location,
-                    ColourCode::Reset,
+                    "Failed to send response: `{}{}{}`",
                     ColourCode::Info,
-                    response_send_err,
+                    why,
                     ColourCode::Reset
                 ),
-                ColourCode::Error
-        ));
-        return;
+                ColourCode::Warning
+        ))
     }
 }
 
@@ -81,195 +88,258 @@ pub async fn run(
 pub async fn handle_component_interaction( mut interaction_data: ComponentInteraction, ctx: Context, split_custom_id: Vec<&str> ) {
     let invoker_id = interaction_data.user.id.get();
 
-    if split_custom_id.get(2).is_none() || split_custom_id.get(3).is_none() || split_custom_id.get(4).is_none() {
-        println!( "{}", create_log_message(
-                format!(
-                    "{}character::create{}: Recieved malformed interaction: `{}{}{}`",
-                    ColourCode::Location,
-                    ColourCode::Reset,
-                    ColourCode::Info,
-                    interaction_data.data.custom_id,
-                    ColourCode::Reset
-                ),
-                ColourCode::Warning
-        ));
+    // If the interaction was invoked by somebody who doesn't own the building process, acknowledge
+    // the interaction, not worrying about potential failures, and quit early
+    if format!("{invoker_id}").as_str() != split_custom_id[3] {
+        let _ = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Acknowledge).await;
         return;
     }
 
     match split_custom_id[2] {
         "continue" => {
-            // If somebody else but the user who invoked the parent command interacts, just
-            // acknowledge but don't bother doing anything
-            if split_custom_id[3].parse().unwrap_or(0) != interaction_data.user.id.get() {
-                let _ = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Acknowledge).await;
-                return;
+
+            match split_custom_id[4] {
+                "0" => {
+
+                    {
+                        let mut context_data_write = ctx.data.write().await;
+                        let character_building_data = context_data_write
+                            .get_mut::<context_keys::CharacterBuildingDataKey>()
+                            .expect("Key inserted at startup");
+
+                        character_building_data.insert(invoker_id, (
+                                HashMap::new(),
+                                *interaction_data.message.clone()
+                        ));
+                    }
+
+                    //
+                    let new_embed = CreateEmbed::new()
+                        .title("Lets start with the basics")
+                        .description(
+                            "Once you press `Continue` you will be prompted for your character's name, species, and backstory"
+                        )
+                        .footer(CreateEmbedFooter::new("1/5"))
+                        .colour(ColourCode::Location.to_embed_colour());
+
+                    let new_buttons = CreateActionRow::Buttons(vec![
+                        CreateButton::new(format!("character|create|continue|{invoker_id}|1"))
+                            .style(ButtonStyle::Primary)
+                            .label("Continue"),
+
+                        CreateButton::new(format!("character|create|cancel|{invoker_id}|1"))
+                            .style(ButtonStyle::Secondary)
+                            .label("Cancel")
+                    ]);
+
+                    let new_message = EditMessage::new()
+                        .embed(new_embed)
+                        .components(vec![new_buttons]);
+
+                    let edit_message_payload = interaction_data.message.edit(&ctx.http, new_message);
+                    if let Err(why) = edit_message_payload.await {
+                        println!( "{}", create_log_message(
+                                format!(
+                                    "Failed to edit message: `{}{}{}`",
+                                    ColourCode::Info,
+                                    why,
+                                    ColourCode::Reset
+                                ),
+                                ColourCode::Warning
+                        ))
+                    }
+
+                    let acknowledge_payload = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Acknowledge);
+                    if let Err(why) = acknowledge_payload.await {
+                        println!( "{}", create_log_message(
+                                format!(
+                                    "Failed to acknowledge payload: `{}{}{}`",
+                                    ColourCode::Info,
+                                    why,
+                                    ColourCode::Reset
+                                ),
+                                ColourCode::Warning
+                        ))
+                    }
+                },
+                // 0
+
+                "1" => {
+
+                    let fields = vec![
+                        CreateActionRow::InputText(CreateInputText::new(
+                                InputTextStyle::Short,
+                                "Name",
+                                "name"
+                        ).required(true)),
+
+                        CreateActionRow::InputText(CreateInputText::new(
+                                InputTextStyle::Short,
+                                "Species",
+                                "species"
+                        ).required(true)),
+
+                        CreateActionRow::InputText(CreateInputText::new(
+                                InputTextStyle::Paragraph,
+                                "Backstory",
+                                "backstory"
+                        ).required(true)),
+                    ];
+
+                    let new_modal = CreateModal::new("character|create|1", "Character Creation")
+                        .components(fields);
+
+                    let modal_payload = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Modal(new_modal));
+                    if let Err(why) = modal_payload.await {
+                        println!( "{}", create_log_message(
+                                format!(
+                                    "Failed to send modal response: `{}{}{}`",
+                                    ColourCode::Info,
+                                    why,
+                                    ColourCode::Reset
+                                ),
+                                ColourCode::Warning
+                        ))
+                    }
+                },
+                // 1
+
+                _ => {}
             }
 
-
-            // --== MODAL LAUNCHING ==-- //
-                
-                // Launch the right modals based on the current stage
-                let response_modal = match split_custom_id[4].parse::<u8>().expect("Stage should be a number") {
-                    0 => {
-                        let fields = vec![
-                            CreateActionRow::InputText(
-                                CreateInputText::new(
-                                    InputTextStyle::Short,
-                                    "name",
-                                    "name"
-                                ).required(true)
-                            ),
-
-                            CreateActionRow::InputText(
-                                CreateInputText::new(
-                                    InputTextStyle::Short,
-                                    "species",
-                                    "species"
-                                ).required(true)
-                            ),
-
-                            CreateActionRow::InputText(
-                                CreateInputText::new(
-                                    InputTextStyle::Paragraph,
-                                    "backstory",
-                                    "backstory"
-                                )
-                            )
-                        ];
-
-
-                        CreateModal::new(format!("character|create|form|{invoker_id}|0"), String::from("Character Creation"))
-                            .components(fields)
-                    },
-                    _ => return
-                };
-            // ==--
-                let modal_send_payload = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Modal(response_modal));
-                let _ = modal_send_payload.await;
-                //let _ = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Acknowledge).await;
         },
-
+        // "continue"
         "cancel" => {
+
+            {
+                let mut context_data_write = ctx.data.write().await;
+                let character_building_data = context_data_write.get_mut::<context_keys::CharacterBuildingDataKey>().expect("Key inserted at runtime");
+
+                character_building_data.remove(&invoker_id);
+            }
+
             let new_embed = CreateEmbed::new()
-                .title("Character creation cancelled")
+                .title("Character Creation Cancled")
                 .colour(ColourCode::Info.to_embed_colour());
 
             let new_message = EditMessage::new()
                 .embed(new_embed)
                 .components(vec![]);
 
-            {
-                let mut context_data = ctx.data.write().await;
-                let character_building_hashmap = context_data.get_mut::<context_keys::CharacterBuildingDataKey>()
-                    .expect("Key already inserted at startup");
-
-                character_building_hashmap.remove(&invoker_id);
+            let response_payload = interaction_data.message.edit(&ctx.http, new_message);
+            if let Err(why) = response_payload.await {
+                println!( "{}", create_log_message(
+                        format!(
+                            "Failed to send response: `{}{}{}`",
+                            ColourCode::Info,
+                            why,
+                            ColourCode::Reset
+                        ),
+                        ColourCode::Warning
+                ))
             }
 
-            let acknowledge_payload  = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Acknowledge);
+
+            let acknowledge_payload = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Acknowledge);
             if let Err(why) = acknowledge_payload.await {
                 println!( "{}", create_log_message(
                         format!(
-                            "{}character::create::handle_component_interaction{} Failed to send acknowlegment: `{}{}{}`",
-                            ColourCode::Location,
-                            ColourCode::Reset,
+                            "Failed to acknowledge interaction: `{}{}{}`",
                             ColourCode::Info,
                             why,
                             ColourCode::Reset
                         ),
                         ColourCode::Warning
-                ) )
-
-            }
-
-            let edit_message_payload = interaction_data.message.edit(&ctx.http, new_message);
-            if let Err(why) = edit_message_payload.await {
-                println!( "{}", create_log_message(
-                        format!(
-                            "{}character::create::handle_component_interaction{} Failed to send cancellation response: `{}{}{}`",
-                            ColourCode::Location,
-                            ColourCode::Reset,
-                            ColourCode::Info,
-                            why,
-                            ColourCode::Reset
-                        ),
-                        ColourCode::Warning
-                ) )
+                ))
             }
         },
-        a => {
-            println!("{a}")
-        }
+        // "cancel"
+        _ => {}
     }
 }
 
 
-// "character|create|form|{invoker_id}|0"
 pub async fn handle_modal( modal_interaction: ModalInteraction, ctx: Context, split_custom_id: Vec<&str> ) {
     let invoker_id = modal_interaction.user.id.get();
-    let model_stage = split_custom_id[4];
 
-    match model_stage {
-        "1" => {
+    {
+        let mut context_data_write = ctx.data.write().await;
+        let character_building_data = context_data_write.get_mut::<context_keys::CharacterBuildingDataKey>().expect("Key inserted at startup");
 
-            // Read user submitted fields
-            let attributes = {
-                let mut attributes = vec![];
+        for action_row in &modal_interaction.data.components {
+            // Our modal only has text fields
+            let ActionRowComponent::InputText(ref input_text) = action_row.components[0]
+                else { panic!("Recieved enum varaint that isn't of type `InputText`") };
 
-                for action_row in modal_interaction.data.components {
+            let user_data = character_building_data
+                .get_mut(&invoker_id)
+                .expect("At this point the user is in the process of building, hence they should be in the HashMap");
 
-                    let text = match &action_row.components[0] {
-                        ActionRowComponent::InputText(item) => match &item.value { Some(item) => item, None => return },  // All fields are required
-                        _ => return                                                                                       // so we can just unwrap
-                    };
-                    attributes.push(text.clone())
-                }
-                attributes
-            };
+            user_data.0.insert(
+                input_text.custom_id.clone(),
+                input_text.value.clone().expect("All fields are marked as required")
+            );
 
-            // Update the cached data
-            {
-                let mut data = ctx.data.write().await;
-                let character_building_hashmap = data.get_mut::<context_keys::CharacterBuildingDataKey>()
-                    .expect("Key inserted at startup");
-
-                let character = character_building_hashmap
-                    .get_mut(&invoker_id)
-                    .expect("This code is executed after the CharacterCreationData gets inserted");
-
-                character.name      = Some( attributes[0].clone() );
-                character.species   = Some( attributes[1].clone() );
-                character.backstory = Some( attributes[2].clone() );
-            }
 
             // Edit the message
-            let new_embed = CreateEmbed::new()
-                .title("Next up, where is your character placed in the world")
-                .description("Now we'll prompt you about your character's motivations and allignment")
-                .colour(ColourCode::Location.to_embed_colour());
+            let new_message = match split_custom_id[2] {
+                "1" => {
 
-            let buttons = CreateActionRow::Buttons(vec![
-                CreateButton::new(format!("character|create|continue|{invoker_id}|2"))
-                    .style(ButtonStyle::Primary)
-                    .label("Continue"),
+                    let new_emed = CreateEmbed::new()
+                        .title("Next up, where is your character placed in the politics of the world?")
+                        .description(
+                            "Now you'll be prompted about your character's motivations and alignmment (which faction, if applicable, are they a part of)"
+                        )
+                        .footer(CreateEmbedFooter::new("2/5"))
+                        .colour(ColourCode::Location.to_embed_colour());
 
-                CreateButton::new(format!("character|create|cancel|{invoker_id}|2"))
-                    .style(ButtonStyle::Secondary)
-                    .label("Cancel")
-            ]);
+                    let new_buttons = CreateActionRow::Buttons(vec![
+                        CreateButton::new(format!("character|create|continue|{invoker_id}|2"))
+                        .style(ButtonStyle::Primary)
+                        .label("Continue"),
 
-            let new_message = EditMessage::new()
-                .embed(new_embed)
-                .components(vec![buttons]);
+                        CreateButton::new(format!("character|create|cancel|{invoker_id}|2"))
+                        .style(ButtonStyle::Secondary)
+                        .label("Cancel")
+                    ]);
 
-            let _ = modal_interaction.create_response(&ctx.http, CreateInteractionResponse::UpdateMessage(
-                    CreateInteractionResponseMessage(&ctx.http, EditMessage)
-            )).await;
-        },
-        // 0
 
-        _ => {}
+                    EditMessage::new()
+                        .embed(new_emed)
+                        .components(vec![new_buttons])
+                },
+                // 0
+
+                _ => {panic!("Unimplemented {}", split_custom_id[2])}
+            };
+
+            let edit_message_payload = user_data.1.edit(&ctx.http, new_message);
+            if let Err(why) = edit_message_payload.await {
+                println!( "{}", create_log_message(
+                        format!(
+                            "Failed to edit message: `{}{}{}`",
+                            ColourCode::Info,
+                            why,
+                            ColourCode::Reset
+                        ),
+                        ColourCode::Warning
+                ));
+                return
+            }
+
+            let acknowledge_payload = modal_interaction.create_response(&ctx.http, CreateInteractionResponse::Acknowledge);
+            if let Err(why) = acknowledge_payload.await {
+                println!( "{}", create_log_message(
+                        format!(
+                            "Failed to acknowledge modal: `{}{}{}`",
+                            ColourCode::Info,
+                            why,
+                            ColourCode::Reset
+                        ),
+                        ColourCode::Warning
+                ))
+            }
+        }
     }
-    
 }
 

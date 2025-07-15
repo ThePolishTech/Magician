@@ -121,75 +121,22 @@ impl EventHandler for runtime_client::RuntimeClient {
             // match command
 
             Interaction::Component(component_interaction_data) => {
-                if let ComponentInteractionDataKind::Button = component_interaction_data.data.kind {
-                    let component_id_clone = component_interaction_data
-                        .data
-                        .custom_id
-                        .clone();
+                let custom_id_clone = component_interaction_data.data.custom_id.clone();
+                let split_custom_id: Vec<&str> = custom_id_clone.split("|").collect();
 
-                    let component_id_items: Vec<&str> = component_id_clone
-                        .split("|")
-                        .collect();
-
-                    if component_id_items.is_empty() {
-                        println!( "{}", create_log_message(
-                                format!(
-                                    "{}EventHandler::interaction_create::component::button{}: Recived mallformed custom_id: `{}{}{}`",
-                                    ColourCode::Location,
-                                    ColourCode::Reset,
-                                    ColourCode::Info,
-                                    component_interaction_data.data.custom_id,
-                                    ColourCode::Reset
-                                ),
-                                ColourCode::Warning
-                        ))
-                    }
-
-                    match component_id_items[0] {
-                        "character" => commands::character::handle_component_interaction( component_interaction_data, ctx, component_id_items ).await,
-                        unknown_component_interaction => println!( "{}", create_log_message(
-                                format!(
-                                    "{}EventHandler::interaction_create::component::button{}: Recieved unknown component interaction: `{}{}{}`",
-                                    ColourCode::Location,
-                                    ColourCode::Reset,
-                                    ColourCode::Info,
-                                    unknown_component_interaction,
-                                    ColourCode::Reset
-                                ),
-                                ColourCode::Warning
-                        ))
-
-                    }
+                match split_custom_id[0] {
+                    "character" => commands::character::handle_component_interaction(component_interaction_data, ctx, split_custom_id).await,
+                    _ => {}
                 }
             },
             // match component
 
             Interaction::Modal(modal_interaction_data) => {
-                let modal_id_clone = modal_interaction_data
-                    .data
-                    .custom_id
-                    .clone();
+                let custom_id_clone = modal_interaction_data.data.custom_id.clone();
+                let split_custom_id: Vec<&str> = custom_id_clone.split("|").collect();
 
-                let modal_id_items: Vec<&str> = modal_id_clone
-                    .split("|")
-                    .collect();
-
-                if modal_id_items.is_empty() {
-                    println!( "{}", create_log_message(
-                            format!(
-                                "{}EventHandler::interaction_create::component::button{}: Recived mallformed custom_id: `{}{}{}`",
-                                ColourCode::Location,
-                                ColourCode::Reset,
-                                ColourCode::Info,
-                                modal_interaction_data.data.custom_id,
-                                ColourCode::Reset
-                            ),
-                            ColourCode::Warning
-                    ))
-                }
-
-                match modal_id_items[0] {
-                    "character" => commands::character::handle_modal(modal_interaction_data, ctx, modal_id_items).await,
+                match split_custom_id[0] {
+                    "character" => commands::character::handle_modal(modal_interaction_data, ctx, split_custom_id).await,
                     _ => {}
                 }
             },
