@@ -1,3 +1,5 @@
+#![allow(clippy::single_match)]
+
 use crate::{
     runtime::{
         commands::character_commands, runtime_client::RuntimeClient
@@ -16,6 +18,7 @@ use serenity::{
     model::application::{
         ComponentInteraction,
         CommandInteraction,
+        ModalInteraction,
         CommandOptionType
     },
     client::Context
@@ -95,3 +98,12 @@ pub async fn handle_component_interaction( interaction_data: ComponentInteractio
     }
 
 }
+
+
+pub async fn handle_modal( modal_interaction: ModalInteraction, ctx: Context, split_custom_id: Vec<&str> ) {
+    match split_custom_id[1] {
+        "create" => character_commands::create::handle_modal(modal_interaction, ctx, split_custom_id).await,
+        _ => {}
+    }
+}
+

@@ -160,11 +160,41 @@ impl EventHandler for runtime_client::RuntimeClient {
                         ))
 
                     }
-                },
-                // match component
-       
-                Interaction::Modal()
+                }
             },
+            // match component
+
+            Interaction::Modal(modal_interaction_data) => {
+                let modal_id_clone = modal_interaction_data
+                    .data
+                    .custom_id
+                    .clone();
+
+                let modal_id_items: Vec<&str> = modal_id_clone
+                    .split("|")
+                    .collect();
+
+                if modal_id_items.is_empty() {
+                    println!( "{}", create_log_message(
+                            format!(
+                                "{}EventHandler::interaction_create::component::button{}: Recived mallformed custom_id: `{}{}{}`",
+                                ColourCode::Location,
+                                ColourCode::Reset,
+                                ColourCode::Info,
+                                modal_interaction_data.data.custom_id,
+                                ColourCode::Reset
+                            ),
+                            ColourCode::Warning
+                    ))
+                }
+
+                match modal_id_items[0] {
+                    "character" => commands::character::handle_modal(modal_interaction_data, ctx, modal_id_items).await,
+                    _ => {}
+                }
+            },
+            // match modal
+
             _ => {}
         }
         // match interaction_data

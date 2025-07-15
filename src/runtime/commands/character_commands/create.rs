@@ -1,13 +1,14 @@
+#![allow(clippy::single_match)]
+
 use crate::{
     runtime::{context_keys, runtime_client::RuntimeClient, sql_scripts},
     utils::misc::{colour_codes::ColourCode, logging::create_log_message},
 };
 
 use serenity::{
-    builder::{CreateActionRow, CreateButton, CreateEmbed, CreateModal, EditMessage, CreateInputText, CreateInteractionResponse, CreateInteractionResponseMessage},
-    client::Context,
-    model::application::{ComponentInteraction, CommandInteraction, ButtonStyle, InputTextStyle}
+    all::InputText, builder::{CreateActionRow, CreateButton, CreateEmbed, CreateInputText, CreateInteractionResponse, CreateInteractionResponseMessage, CreateModal, EditMessage}, client::Context, model::application::{ButtonStyle, CommandInteraction, ComponentInteraction, InputTextStyle, ModalInteraction, ActionRowComponent}
 };
+use termion::color::Color;
 
 pub async fn run(
     runtime_client: &RuntimeClient,
@@ -200,5 +201,75 @@ pub async fn handle_component_interaction( mut interaction_data: ComponentIntera
             println!("{a}")
         }
     }
+}
+
+
+// "character|create|form|{invoker_id}|0"
+pub async fn handle_modal( modal_interaction: ModalInteraction, ctx: Context, split_custom_id: Vec<&str> ) {
+    let invoker_id = modal_interaction.user.id.get();
+    let model_stage = split_custom_id[4];
+
+    match model_stage {
+        "1" => {
+
+            // Read user submitted fields
+            let attributes = {
+                let mut attributes = vec![];
+
+                for action_row in modal_interaction.data.components {
+
+                    let text = match &action_row.components[0] {
+                        ActionRowComponent::InputText(item) => match &item.value { Some(item) => item, None => return },  // All fields are required
+                        _ => return                                                                                       // so we can just unwrap
+                    };
+                    attributes.push(text.clone())
+                }
+                attributes
+            };
+
+            // Update the cached data
+            {
+                let mut data = ctx.data.write().await;
+                let character_building_hashmap = data.get_mut::<context_keys::CharacterBuildingDataKey>()
+                    .expect("Key inserted at startup");
+
+                let character = character_building_hashmap
+                    .get_mut(&invoker_id)
+                    .expect("This code is executed after the CharacterCreationData gets inserted");
+
+                character.name      = Some( attributes[0].clone() );
+                character.species   = Some( attributes[1].clone() );
+                character.backstory = Some( attributes[2].clone() );
+            }
+
+            // Edit the message
+            let new_embed = CreateEmbed::new()
+                .title("Next up, where is your character placed in the world")
+                .description("Now we'll prompt you about your character's motivations and allignment")
+                .colour(ColourCode::Location.to_embed_colour());
+
+            let buttons = CreateActionRow::Buttons(vec![
+                CreateButton::new(format!("character|create|continue|{invoker_id}|2"))
+                    .style(ButtonStyle::Primary)
+                    .label("Continue"),
+
+                CreateButton::new(format!("character|create|cancel|{invoker_id}|2"))
+                    .style(ButtonStyle::Secondary)
+                    .label("Cancel")
+            ]);
+
+            let new_message = EditMessage::new()
+                .embed(new_embed)
+                .components(vec![buttons]);
+
+            let _ = modal_interaction.create_response(&ctx.http, CreateInteractionResponse::UpdateMessage(
+                    CreateInteractionResponseMessage(&ctx.http, EditMessage)
+            )).await;
+        },
+        // 0
+
+        _ => {}
+    }
+    
 }
 
