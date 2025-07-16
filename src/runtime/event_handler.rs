@@ -1,6 +1,7 @@
 #![allow(clippy::single_match)]
 // --== MODULE IMPORTS ==-- //
 
+    use core::panic;
     use std::path::Component;
 
     use crate::{
@@ -126,7 +127,7 @@ impl EventHandler for runtime_client::RuntimeClient {
 
                 match split_custom_id[0] {
                     "character" => commands::character::handle_component_interaction(component_interaction_data, ctx, split_custom_id).await,
-                    _ => {}
+                    unknown_component => panic!("Unknown Component: `{unknown_component}`")
                 }
             },
             // match component
@@ -137,7 +138,7 @@ impl EventHandler for runtime_client::RuntimeClient {
 
                 match split_custom_id[0] {
                     "character" => commands::character::handle_modal(modal_interaction_data, ctx, split_custom_id).await,
-                    _ => {}
+                    unknown_modal => panic!("Unknown Modal: `{unknown_modal}`")
                 }
             },
             // match modal

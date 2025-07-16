@@ -1,5 +1,7 @@
 #![allow(clippy::single_match)]
 
+use core::panic;
+
 use crate::{
     runtime::{
         commands::character_commands, runtime_client::RuntimeClient
@@ -68,7 +70,7 @@ pub async fn run( runtime_client: &RuntimeClient, ctx: Context, interaction_data
 pub async fn handle_component_interaction( interaction_data: ComponentInteraction, ctx: Context, split_custom_id: Vec<&str> ) {
     match split_custom_id[1] {
         "create" => character_commands::create::handle_component_interaction(interaction_data, ctx, split_custom_id).await,
-        _ => {}
+        uknown_component => panic!("character uknown_component: {uknown_component}")
     }
 }
 
@@ -76,7 +78,7 @@ pub async fn handle_component_interaction( interaction_data: ComponentInteractio
 pub async fn handle_modal( modal_interaction: ModalInteraction, ctx: Context, split_custom_id: Vec<&str> ) {
     match split_custom_id[1] {
         "create" => character_commands::create::handle_modal(modal_interaction, ctx, split_custom_id).await,
-        _ => {}
+        unknown_modal => panic!("Unknown modal: `{unknown_modal}`")
     }
 }
 

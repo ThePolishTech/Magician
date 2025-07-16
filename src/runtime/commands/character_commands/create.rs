@@ -1,3 +1,4 @@
+use core::panic;
 use std::collections::HashMap;
 
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
 };
 
 use serenity::{
-    all::{CreateEmbedFooter, InputText},
+    all::CreateEmbedFooter,
     builder::{
         CreateActionRow, CreateButton, CreateEmbed, CreateInputText, CreateInteractionResponse, CreateInteractionResponseMessage, CreateModal, EditMessage
     }, 
@@ -22,7 +23,7 @@ use serenity::{
     }
 };
 
-pub async fn run( runtime_client: &RuntimeClient, ctx: Context, interaction_data: CommandInteraction ) {
+pub async fn run( _runtime_client: &RuntimeClient, ctx: Context, interaction_data: CommandInteraction ) {
     let invoker_id = interaction_data.user.id.get();
 
     let response = 'response: {
@@ -98,7 +99,7 @@ pub async fn handle_component_interaction( mut interaction_data: ComponentIntera
     match split_custom_id[2] {
         "continue" => {
 
-            match split_custom_id[4] {
+            let interaction_response = match split_custom_id[4] {
                 "0" => {
 
                     {
@@ -149,18 +150,7 @@ pub async fn handle_component_interaction( mut interaction_data: ComponentIntera
                         ))
                     }
 
-                    let acknowledge_payload = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Acknowledge);
-                    if let Err(why) = acknowledge_payload.await {
-                        println!( "{}", create_log_message(
-                                format!(
-                                    "Failed to acknowledge payload: `{}{}{}`",
-                                    ColourCode::Info,
-                                    why,
-                                    ColourCode::Reset
-                                ),
-                                ColourCode::Warning
-                        ))
-                    }
+                    CreateInteractionResponse::Acknowledge
                 },
                 // 0
 
@@ -189,26 +179,96 @@ pub async fn handle_component_interaction( mut interaction_data: ComponentIntera
                     let new_modal = CreateModal::new("character|create|1", "Character Creation")
                         .components(fields);
 
-                    let modal_payload = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Modal(new_modal));
-                    if let Err(why) = modal_payload.await {
-                        println!( "{}", create_log_message(
-                                format!(
-                                    "Failed to send modal response: `{}{}{}`",
-                                    ColourCode::Info,
-                                    why,
-                                    ColourCode::Reset
-                                ),
-                                ColourCode::Warning
-                        ))
-                    }
+                    CreateInteractionResponse::Modal(new_modal)
                 },
                 // 1
 
-                _ => {}
+                "2" => {
+                    
+                    let fields = vec![
+                        CreateActionRow::InputText(CreateInputText::new(
+                            InputTextStyle::Short,
+                            "Motivations",
+                            "motivations"
+                        ).required(true)),
+
+                        CreateActionRow::InputText(CreateInputText::new(
+                            InputTextStyle::Short,
+                            "Alignment",
+                            "alignment"
+                        ).required(true))
+                    ];
+
+                    let new_modal = CreateModal::new("character|create|2", "Character Creation")
+                        .components(fields);
+
+                    CreateInteractionResponse::Modal(new_modal)
+                },
+                // 2
+
+                "3" => {
+
+                    let fields = vec![
+                        CreateActionRow::InputText(CreateInputText::new(
+                            InputTextStyle::Short,
+                            "Likes",
+                            "likes"
+                        ).required(true)),
+                        
+                        CreateActionRow::InputText(CreateInputText::new(
+                            InputTextStyle::Short,
+                            "Dislikes",
+                            "dislikes"
+                        ).required(true))
+                    ];
+
+                    let new_modal = CreateModal::new("character|create|3", "Character Creation")
+                        .components(fields);
+
+                    CreateInteractionResponse::Modal(new_modal)
+                },
+                // 3
+                "5" => {
+
+                    let fields = vec![
+                        CreateActionRow::InputText(CreateInputText::new(
+                            InputTextStyle::Short,
+                            "Companions",
+                            "companions"
+                        ).required(true)),
+                        
+                        CreateActionRow::InputText(CreateInputText::new(
+                            InputTextStyle::Short,
+                            "Extras",
+                            "extras"
+                        ).required(true))
+                    ];
+
+                    let new_modal = CreateModal::new("character|create|5", "Character Creation")
+                        .components(fields);
+
+                    CreateInteractionResponse::Modal(new_modal)
+                },
+                // 5
+
+                unknown_stage => panic!("Recieved unknown stage for component interaction handler: {unknown_stage}")
+            };
+            let response_payload = interaction_data.create_response(&ctx.http, interaction_response);
+            if let Err(why) = response_payload.await {
+                println!( "{}", create_log_message(
+                        format!(
+                            "Failed to send response: `{}{}{}`",
+                            ColourCode::Info,
+                            why,
+                            ColourCode::Reset
+                        ),
+                        ColourCode::Warning
+                ))
             }
 
         },
         // "continue"
+
         "cancel" => {
 
             {
@@ -254,6 +314,73 @@ pub async fn handle_component_interaction( mut interaction_data: ComponentIntera
             }
         },
         // "cancel"
+
+        class if ["martial", "caster", "half-caster"].contains(&class) => {
+
+            {
+                let mut context_data_write = ctx.data.write().await;
+                let character_building_data = context_data_write.get_mut::<context_keys::CharacterBuildingDataKey>().expect("Key inserted at runtime");
+
+                let invoker_data = character_building_data
+                    .get_mut(&invoker_id)
+                    .expect("This code can only run when the user *has* their id here");
+
+                invoker_data.0.insert(
+                    String::from("class"),
+                    String::from( class )
+                );
+
+                let message_to_edit = &mut invoker_data.1;
+
+                let new_emed = CreateEmbed::new()
+                    .title("And lastly,")
+                    .description("Does your character have any companions, or anything else?")
+                    .footer(CreateEmbedFooter::new("5/5"))
+                    .colour(ColourCode::Location.to_embed_colour());
+
+                let new_buttons = CreateActionRow::Buttons(vec![
+                    CreateButton::new(format!("character|create|continue|{invoker_id}|5"))
+                    .style(ButtonStyle::Primary)
+                    .label("Continue"),
+
+                    CreateButton::new(format!("character|create|cancel|{invoker_id}|5"))
+                    .style(ButtonStyle::Secondary)
+                    .label("Cancel")
+                ]);
+
+                let new_message = EditMessage::new()
+                    .embed(new_emed)
+                    .components(vec![new_buttons]);
+
+                let edit_message_payload = message_to_edit.edit(&ctx.http, new_message);
+                if let Err(why) = edit_message_payload.await {
+                    println!( "{}", create_log_message(
+                            format!(
+                                "Failed to edit message: `{}{}{}`",
+                                ColourCode::Info,
+                                why,
+                                ColourCode::Reset
+                            ),
+                            ColourCode::Warning
+                    ))
+                }
+
+                let acknowledge_payload = interaction_data.create_response(&ctx.http, CreateInteractionResponse::Acknowledge);
+                if let Err(why) = acknowledge_payload.await {
+                    println!( "{}", create_log_message(
+                            format!(
+                                "Failed to acknowledge interaction: `{}{}{}`",
+                                ColourCode::Info,
+                                why,
+                                ColourCode::Reset
+                            ),
+                            ColourCode::Warning
+                    ))
+                }
+            }
+        },
+        // `class`
+
         _ => {}
     }
 }
@@ -271,74 +398,160 @@ pub async fn handle_modal( modal_interaction: ModalInteraction, ctx: Context, sp
             let ActionRowComponent::InputText(ref input_text) = action_row.components[0]
                 else { panic!("Recieved enum varaint that isn't of type `InputText`") };
 
-            let user_data = character_building_data
-                .get_mut(&invoker_id)
-                .expect("At this point the user is in the process of building, hence they should be in the HashMap");
+                let user_data = character_building_data
+                    .get_mut(&invoker_id)
+                    .expect("At this point the user is in the process of building, hence they should be in the HashMap");
 
             user_data.0.insert(
                 input_text.custom_id.clone(),
                 input_text.value.clone().expect("All fields are marked as required")
             );
+        }
 
 
-            // Edit the message
-            let new_message = match split_custom_id[2] {
-                "1" => {
+        // Edit the message
+        let new_message = match split_custom_id[2] {
+            "1" => {
 
-                    let new_emed = CreateEmbed::new()
-                        .title("Next up, where is your character placed in the politics of the world?")
-                        .description(
-                            "Now you'll be prompted about your character's motivations and alignmment (which faction, if applicable, are they a part of)"
-                        )
-                        .footer(CreateEmbedFooter::new("2/5"))
-                        .colour(ColourCode::Location.to_embed_colour());
+                let new_emed = CreateEmbed::new()
+                    .title("Next up, where is your character placed in the politics of the world?")
+                    .description(
+                        "Now you'll be prompted about your character's motivations and alignment (which faction, if applicable, are they a part of)"
+                    )
+                    .footer(CreateEmbedFooter::new("2/5"))
+                    .colour(ColourCode::Location.to_embed_colour());
 
-                    let new_buttons = CreateActionRow::Buttons(vec![
-                        CreateButton::new(format!("character|create|continue|{invoker_id}|2"))
-                        .style(ButtonStyle::Primary)
-                        .label("Continue"),
+                let new_buttons = CreateActionRow::Buttons(vec![
+                    CreateButton::new(format!("character|create|continue|{invoker_id}|2"))
+                    .style(ButtonStyle::Primary)
+                    .label("Continue"),
 
-                        CreateButton::new(format!("character|create|cancel|{invoker_id}|2"))
-                        .style(ButtonStyle::Secondary)
-                        .label("Cancel")
-                    ]);
+                    CreateButton::new(format!("character|create|cancel|{invoker_id}|2"))
+                    .style(ButtonStyle::Secondary)
+                    .label("Cancel")
+                ]);
 
 
-                    EditMessage::new()
-                        .embed(new_emed)
-                        .components(vec![new_buttons])
-                },
-                // 0
+                EditMessage::new()
+                    .embed(new_emed)
+                    .components(vec![new_buttons])
+            },
+            // 1
 
-                _ => {panic!("Unimplemented {}", split_custom_id[2])}
-            };
+            "2" => {
 
-            let edit_message_payload = user_data.1.edit(&ctx.http, new_message);
-            if let Err(why) = edit_message_payload.await {
-                println!( "{}", create_log_message(
-                        format!(
-                            "Failed to edit message: `{}{}{}`",
-                            ColourCode::Info,
-                            why,
-                            ColourCode::Reset
-                        ),
-                        ColourCode::Warning
-                ));
-                return
-            }
+                let new_emed = CreateEmbed::new()
+                    .title("How about your character's fondnessses and disapprovals")
+                    .description("What do they like? What do they dislike?")
+                    .footer(CreateEmbedFooter::new("3/5"))
+                    .colour(ColourCode::Location.to_embed_colour());
 
-            let acknowledge_payload = modal_interaction.create_response(&ctx.http, CreateInteractionResponse::Acknowledge);
-            if let Err(why) = acknowledge_payload.await {
-                println!( "{}", create_log_message(
-                        format!(
-                            "Failed to acknowledge modal: `{}{}{}`",
-                            ColourCode::Info,
-                            why,
-                            ColourCode::Reset
-                        ),
-                        ColourCode::Warning
-                ))
-            }
+                let new_buttons = CreateActionRow::Buttons(vec![
+                    CreateButton::new(format!("character|create|continue|{invoker_id}|3"))
+                    .style(ButtonStyle::Primary)
+                    .label("Continue"),
+
+                    CreateButton::new(format!("character|create|cancel|{invoker_id}|3"))
+                    .style(ButtonStyle::Secondary)
+                    .label("Cancel")
+                ]);
+
+                EditMessage::new()
+                    .embed(new_emed)
+                    .components(vec![new_buttons])
+            },
+            // 2
+
+            "3" => {
+
+                let new_emed = CreateEmbed::new()
+                    .title("What class is your character?")
+                    .description(
+                        "- If your character only uses physical weapons, then they are a `Martial`\n\
+                            - If they only use forms of magic, then they are a `Caster`\n\
+                            - Or if a mix of both, a `Half-Caster"
+                    )
+                    .footer(CreateEmbedFooter::new("4/5"))
+                    .colour(ColourCode::Location.to_embed_colour());
+
+                let new_buttons = CreateActionRow::Buttons(vec![
+                    CreateButton::new(format!("character|create|martial|{invoker_id}|4"))
+                    .style(ButtonStyle::Primary)
+                    .label("Martial"),
+
+                    CreateButton::new(format!("character|create|caster|{invoker_id}|4"))
+                    .style(ButtonStyle::Primary)
+                    .label("Caster"),
+
+                    CreateButton::new(format!("character|create|half-caster|{invoker_id}|4"))
+                    .style(ButtonStyle::Primary)
+                    .label("Half-Caster"),
+
+                    CreateButton::new(format!("character|create|cancel|{invoker_id}|4"))
+                    .style(ButtonStyle::Secondary)
+                    .label("Cancel")
+                ]);
+
+                EditMessage::new()
+                    .embed(new_emed)
+                    .components(vec![new_buttons])
+            },
+            // 3
+
+            "5" => {
+                println!("RAAA");
+
+                let new_emed = {
+
+
+
+                    // TODO: Verify existance of all fields
+                    let character_name = &user_data.0["name"].clone();
+
+                    CreateEmbed::new()
+                        .title("Perfect, everything's done")
+                        .description(format!("Say hello to {character_name}"))
+                        .colour(ColourCode::Success.to_embed_colour())
+                };
+
+                EditMessage::new()
+                    .embed(new_emed)
+                    .components(vec![])
+
+
+            },
+            // 5
+
+
+
+
+            unimplemented_stage => {panic!("unimplemented stage for modal handling: {unimplemented_stage}")}
+        };
+
+        let edit_message_payload = user_data.1.edit(&ctx.http, new_message);
+        if let Err(why) = edit_message_payload.await {
+            println!( "{}", create_log_message(
+                    format!(
+                        "Failed to edit message: `{}{}{}`",
+                        ColourCode::Info,
+                        why,
+                        ColourCode::Reset
+                    ),
+                    ColourCode::Warning
+            ));
+        }
+
+        let acknowledge_payload = modal_interaction.create_response(&ctx.http, CreateInteractionResponse::Acknowledge);
+        if let Err(why) = acknowledge_payload.await {
+            println!( "{}", create_log_message(
+                    format!(
+                        "Failed to acknowledge modal: `{}{}{}`",
+                        ColourCode::Info,
+                        why,
+                        ColourCode::Reset
+                    ),
+                    ColourCode::Warning
+            ))
         }
     }
 }
