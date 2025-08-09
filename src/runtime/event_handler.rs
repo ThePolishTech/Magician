@@ -1,9 +1,6 @@
 #![allow(clippy::single_match)]
 // --== MODULE IMPORTS ==-- //
 
-    use core::panic;
-    use std::path::Component;
-
     use crate::{
         runtime::{
             commands,
@@ -19,13 +16,16 @@
 
 // --== CRATE IMPORTS ==-- //
 
+    // STD & CORE
+        use core::panic;
+
     // SERENITY
         use serenity::{
             all::{Command, CreateEmbed, Interaction, Timestamp}, async_trait, builder::CreateMessage, client::{
                 Context,
                 EventHandler
             }, model::{
-                gateway::Ready, id::ChannelId, application::ComponentInteractionDataKind
+                gateway::Ready, id::ChannelId
             }
         };
 // ==--
@@ -126,7 +126,12 @@ impl EventHandler for runtime_client::RuntimeClient {
                 let split_custom_id: Vec<&str> = custom_id_clone.split("|").collect();
 
                 match split_custom_id[0] {
-                    "character" => commands::character::handle_component_interaction(component_interaction_data, ctx, split_custom_id).await,
+                    "character" => commands::character::handle_component_interaction(
+                        self, 
+                        component_interaction_data,
+                        ctx,
+                        split_custom_id
+                    ).await,
                     unknown_component => panic!("Unknown Component: `{unknown_component}`")
                 }
             },

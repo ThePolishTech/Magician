@@ -12,6 +12,7 @@ CREATE TABLE  IF NOT EXISTS  DiscordUsers
 CREATE TABLE  IF NOT EXISTS  Characters
 (
     pk_characterID  INTEGER  PRIMARY KEY,
+    ownerDiscordID  INTEGER,
 
     name         TEXT  NOT NULL,
     species      TEXT  NOT NULL,

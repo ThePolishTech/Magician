@@ -67,9 +67,9 @@ pub async fn run( runtime_client: &RuntimeClient, ctx: Context, interaction_data
 }
 
 
-pub async fn handle_component_interaction( interaction_data: ComponentInteraction, ctx: Context, split_custom_id: Vec<&str> ) {
+pub async fn handle_component_interaction( runtime_client: &RuntimeClient, interaction_data: ComponentInteraction, ctx: Context, split_custom_id: Vec<&str> ) {
     match split_custom_id[1] {
-        "create" => character_commands::create::handle_component_interaction(interaction_data, ctx, split_custom_id).await,
+        "create" => character_commands::create::handle_component(runtime_client, interaction_data, ctx, split_custom_id).await,
         uknown_component => panic!("character uknown_component: {uknown_component}")
     }
 }
