@@ -257,7 +257,8 @@ async fn main() -> ExitCode{
             | GatewayIntents::GUILD_MESSAGE_REACTIONS;
 
         let client = runtime_client::RuntimeClient {
-            database_connection: db_connection
+            database_connection: db_connection,
+            wakeup_channel_id
         };
 
         println!(
@@ -276,7 +277,6 @@ async fn main() -> ExitCode{
                 // Filling our client's context typemap with values
                 {
                     let mut data_write = client_builder.data.write().await;
-                    data_write.insert::<context_keys::WakeupChannelIdKey>( wakeup_channel_id );
                     data_write.insert::<context_keys::CharacterBuildingDataKey>( HashMap::new() );
                 }
 

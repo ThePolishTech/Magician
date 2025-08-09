@@ -4,11 +4,6 @@ use serenity::{
 };
 use std::collections::hash_map::HashMap;
 
-pub struct WakeupChannelIdKey;
-impl TypeMapKey for WakeupChannelIdKey {
-    type Value = u64;
-}
-
 /// Containts a `HashMap` who's keys are the id's of users who are in the process of building a
 /// character. The value of this `HashMap` is a tuple of another `HashMap` where the key `String`
 /// is the name of a character's attribute, and the value is a `String` containing it's value when 

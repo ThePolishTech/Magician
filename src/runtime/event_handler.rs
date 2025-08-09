@@ -4,7 +4,6 @@
     use crate::{
         runtime::{
             commands,
-            context_keys,
             runtime_client
         }, 
         utils::misc::{
@@ -44,8 +43,7 @@ impl EventHandler for runtime_client::RuntimeClient {
             
             // First of all, we need to read the channel id towards which, we will send the wakeup
             // message. It is read at startup from the config file and stored here in our Context
-             let wakeup_channel_id = *ctx.data.read().await.get::<context_keys::WakeupChannelIdKey>()
-                .expect("Wakeup channel id should be stored in Context");
+             let wakeup_channel_id = self.wakeup_channel_id;
 
             // Next up, we need to define the colour and timestamp to be used by our embed, and
             // additionally, the channel towards which we shall fire it
