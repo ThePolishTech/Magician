@@ -34,11 +34,13 @@
 
     // SQLX
         use sqlx::{
-            sqlite::SqliteConnectOptions, SqlitePool
+            sqlite::SqliteConnectOptions, SqlitePool, Row
         };
 
     // TOML
         use toml::{Table, Value};
+
+    use crate::runtime::sql_scripts::characters::get_character_identifiers;
 // ==--
 
 
@@ -248,7 +250,51 @@ async fn main() -> ExitCode{
             }
         }
     // ==--
+    
+    // --== PREPARE CACHE ==-- //
 
+        let get_character_identifiers = get_character_identifiers(&db_connection);
+        let character_identifiers = match get_character_identifiers.await {
+            Ok(rows) => rows,
+            Err(why) => {
+                println!(
+                    "{}Error{}: Unable to fetch characters from database: `{}{}{}`",
+                    ColourCode::Error,
+                    ColourCode::Reset,
+                    ColourCode::Info,
+                    why,
+                    ColourCode::Reset
+                );
+                return ExitCode::from(4);
+            }
+        };
+        let mut user_characters: HashMap<u64, HashMap<u64, String>> = HashMap::new();
+        for row in character_identifiers {
+            let ( owner_id, character_id, character_name ): (u64, u64, String) = (
+                row.get(0),
+                row.get(1),
+                row.get(2)
+            );
+
+            match user_characters.get_mut(&owner_id) {
+                None => {
+                    let mut characters_map = HashMap::new();
+                    characters_map.insert(character_id, character_name);
+                    user_characters.insert(
+                        owner_id,
+                        characters_map
+                    );
+                },
+                Some(user_data) => {
+                    user_data.insert(
+                        character_id,
+                        character_name
+                    );
+                }
+            }
+        }
+    // ==-- 
+    
     // --== SETUP CONECTION TO GATEWAY ==-- //
     
         print!("Setting up client... ");
@@ -268,23 +314,31 @@ async fn main() -> ExitCode{
         );
     // ==--
     
+    
     // --== BUILD CLIENT ==-- //
 
         print!("Building client... ");
         let mut bot_client = match Client::builder( bot_token, gateway_intents ).event_handler(client).await {
             Ok(client_builder) => {
 
-                // Filling our client's context typemap with values
-                {
-                    let mut data_write = client_builder.data.write().await;
-                    data_write.insert::<context_keys::CharacterBuildingDataKey>( HashMap::new() );
-                }
-
                 println!(
                     "{}Ok!{}",
                     ColourCode::Success,
                     ColourCode::Reset
                 );
+
+                // Filling our client's context typemap with values
+                {
+                    let mut data_writer = client_builder.data.write().await;
+                    data_writer.insert::<context_keys::CharacterBuildingDataKey>( HashMap::new() );
+
+                    // Create and populate cache
+                    println!("Initialising cache...");
+
+                    // User characters
+                    println!("    User Character Cache...{}Ok!{}", ColourCode::Success, ColourCode::Reset);
+                    data_writer.insert::<context_keys::UserCharactersCache>(user_characters);
+                }
 
                 client_builder
             },
@@ -303,7 +357,7 @@ async fn main() -> ExitCode{
     // ==--
     
     // --== STARTING CLIENT ==-- //
-        println!("Starting Client... {}Ok!{}", ColourCode::Success, ColourCode::Reset);
+        println!("\nStarting Client... {}Ok!{}", ColourCode::Success, ColourCode::Reset);
         println!("\n\nBegin Log:");
         let client_exit = bot_client.start().await;
         match client_exit {

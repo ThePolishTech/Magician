@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use sqlx::{
-    sqlite::{
-        SqlitePool
-    }, Error
+    sqlite::{SqlitePool, SqliteRow}, Error, Row
 };
 
 #[derive(Clone)]
@@ -135,3 +133,30 @@ pub async fn insert_character(database_conn_pool: &SqlitePool, user_id: u64, cha
 
     transaction.commit().await
 }
+
+
+
+pub async fn get_character_identifiers( database_conn_pool: &SqlitePool ) -> Result<Vec<SqliteRow>, Error> {
+    sqlx::query(
+        "\
+        SELECT ownerDiscordID, pk_characterID, name
+        FROM Characters;
+        "
+    )
+        .fetch_all(database_conn_pool)
+        .await
+}
+
+
+pub async fn get_largest_character_id( database_conn_pool: &SqlitePool ) -> Result<u64, Error> {
+    let largest_id: u64 = sqlx::query("\
+        SELECT MAX(pk_characterID)
+        FROM Characters;
+    ")
+        .fetch_one(database_conn_pool)
+        .await?
+        .get(0);
+
+    Ok(largest_id)
+}
+

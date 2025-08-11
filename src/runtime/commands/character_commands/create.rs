@@ -659,18 +659,20 @@ pub async fn handle_component( runtime_client: &RuntimeClient, component_interac
             // character into the database on the user's behalf
 
             let new_message = {
-                let mut context_data_writer = ctx.data.write().await;
-                let character_building_cache = context_data_writer
-                    .get_mut::<context_keys::CharacterBuildingDataKey>()
-                    .expect("Key inserted in main.rs");
 
-                let users_cache = character_building_cache
-                    .get_mut(&invoker_id)
-                    .expect("User will be in cache when finalising character creation");
+                let built_character = {
+                    let mut context_data_writer = ctx.data.write().await;
+                    let character_building_cache = context_data_writer
+                        .get_mut::<context_keys::CharacterBuildingDataKey>()
+                        .expect("Key inserted in main.rs");
 
+                    let character_hashmap = &character_building_cache.get_mut(&invoker_id)
+                        .expect("User will be in cache when finalising character creation")
+                        .0;
 
+                    sql_scripts::characters::Character::from_hashmap_cache(character_hashmap)
+                };
 
-                let built_character = sql_scripts::characters::Character::from_hashmap_cache(&users_cache.0);
                 match built_character {
                     Ok(character) => {
 
@@ -697,6 +699,52 @@ pub async fn handle_component( runtime_client: &RuntimeClient, component_interac
                                         ColourCode::Success
                                 ));
 
+
+                                
+                                // Clear the building cache
+                                {
+                                    let mut data_writer = ctx.data.write().await;
+                                    data_writer.get_mut::<context_keys::CharacterBuildingDataKey>()
+                                        .expect("User's character will be in cache during character finalisation")
+                                        .remove(&invoker_id);
+                                }
+
+
+
+                                // Insert into character identifiers cache
+                                {
+                                    let new_character_id = sql_scripts::characters::get_largest_character_id(&runtime_client.database_connection)
+                                        .await
+                                        .expect("Getting the ID of the just inserted character. A simple operation that should not fail");
+
+                                    let mut data_writer = ctx.data.write().await;
+                                    let user_characters = data_writer.get_mut::<context_keys::UserCharactersCache>()
+                                        .expect("Key inserted in main.rs");
+
+                                    match user_characters.get_mut(&invoker_id) {
+                                        None => {
+                                            let mut new_characters_identifier_hashmap = HashMap::new();
+                                            new_characters_identifier_hashmap.insert(
+                                                new_character_id,
+                                                character.name.clone()
+                                            );
+
+                                            user_characters.insert(
+                                                invoker_id,
+                                                new_characters_identifier_hashmap
+                                            );
+                                        },
+                                        Some(character_id_name_hashmap) => {
+                                            character_id_name_hashmap.insert(
+                                                new_character_id,
+                                                character.name.clone()
+                                            );
+                                        }
+                                    };
+                                }
+
+
+
                                 let finish_embed = CreateEmbed::new()
                                     .title(format!( "{} Has been successfully added to your characters!", character.name))
                                     .description("You may now use them!")
@@ -708,13 +756,10 @@ pub async fn handle_component( runtime_client: &RuntimeClient, component_interac
                                     .label("Dismiss")
                                 ]);
 
-                                character_building_cache.remove(&invoker_id); // We no longer need
-                                                                              // this
-
                                 CreateInteractionResponseMessage::new()
                                     .embed(finish_embed)
                                     .components(vec![ finish_buttons ])
-                            }
+                            },
                             Err(why) => {
                                 println!("{}", create_log_message(
                                         format!(

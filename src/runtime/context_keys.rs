@@ -18,3 +18,12 @@ impl TypeMapKey for CharacterBuildingDataKey {
     // conveniant and sure-fire approach
     type Value = HashMap<u64, (HashMap<String, String>, Message)>; 
 }
+
+/// HashMap<discord_user_id: u64, HashMap<character_id: u64, character_name: String>>
+pub struct UserCharactersCache;
+impl TypeMapKey for UserCharactersCache {
+    type Value = HashMap<
+        u64,
+        HashMap<u64, String>
+    >;
+}
